@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend server for Smart Expense Tracker",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.js",
