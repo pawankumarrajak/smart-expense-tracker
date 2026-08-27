@@ -1,16 +1,17 @@
+import { useEffect, useState } from "react";
+
 import CurrencyConverter from "./components/CurrencyConverter";
 import Dashboard from "./components/Dashboard";
-import { useEffect, useState } from "react";
+import ExpenseForm from "./components/ExpenseForm";
+import ExpenseList from "./components/ExpenseList";
+import EditExpenseForm from "./components/EditExpenseForm";
+import Footer from "./components/Footer";
 
 import {
   getExpenses,
   updateExpense,
   deleteExpense
 } from "./services/expenseApi";
-
-import ExpenseForm from "./components/ExpenseForm";
-import ExpenseList from "./components/ExpenseList";
-import EditExpenseForm from "./components/EditExpenseForm";
 
 function App() {
   const [expenses, setExpenses] = useState([]);
@@ -46,7 +47,7 @@ function App() {
     ]);
   };
 
-  // Handle edit button
+  // Handle edit
   const handleEdit = (expense) => {
     setEditingExpense(expense);
   };
@@ -110,6 +111,7 @@ function App() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="container">
 
         {/* Dashboard */}
@@ -164,6 +166,10 @@ function App() {
         </section>
 
       </main>
+
+      {/* Footer */}
+      <Footer />
+
     </div>
   );
 }
