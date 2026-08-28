@@ -6,6 +6,7 @@ const connectDB = require("./config/db");
 
 const expenseRoutes = require("./routes/expenseRoutes");
 const currencyRoutes = require("./routes/currencyRoutes");
+const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
@@ -32,6 +33,10 @@ app.get("/api/health", (req, res) => {
     message: "Smart Expense Tracker API is running"
   });
 });
+
+
+// Centralized error handler
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

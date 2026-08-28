@@ -26,19 +26,35 @@ function ExpenseForm({ onExpenseCreated }) {
 
     setError("");
 
-    if (Number(formData.amount) <= 0) {
-    setError("Amount must be greater than 0");
-    setLoading(false);
-    return;
+    const numericAmount = Number(formData.amount);
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setError("Amount must be greater than 0");
+      return;
+    }
+
+    if (formData.category.trim().length < 2) {
+      setError("Category must contain at least 2 characters");
+      return;
+    }
+
+    if (formData.category.trim().length > 50) {
+      setError("Category cannot exceed 50 characters");
+      return;
+    }
+
+    if (formData.description.trim().length > 200) {
+      setError("Description cannot exceed 200 characters");
+      return;
     }
 
     setLoading(true);
 
     try {
       const result = await createExpense({
-        amount: Number(formData.amount),
-        category: formData.category,
-        description: formData.description,
+        amount: numericAmount,
+        category: formData.category.trim(),
+        description: formData.description.trim(),
         date: formData.date
       });
 
@@ -70,7 +86,8 @@ function ExpenseForm({ onExpenseCreated }) {
           name="amount"
           value={formData.amount}
           onChange={handleChange}
-          min="1"
+          min="0.01"
+          step="0.01"
           required
         />
       </div>
@@ -82,6 +99,8 @@ function ExpenseForm({ onExpenseCreated }) {
           name="category"
           value={formData.category}
           onChange={handleChange}
+          minLength={2}
+          maxLength={50}
           required
         />
       </div>
@@ -93,6 +112,7 @@ function ExpenseForm({ onExpenseCreated }) {
           name="description"
           value={formData.description}
           onChange={handleChange}
+          maxLength={200}
         />
       </div>
 

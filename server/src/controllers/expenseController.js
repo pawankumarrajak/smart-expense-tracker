@@ -1,14 +1,84 @@
 const mongoose = require("mongoose");
 const Expense = require("../models/Expense");
 
-const createExpense = async (req, res) => {
+const createExpense = async (req, res, next) => {
   try {
-    const { amount, category, description, date } = req.body;
-
-    const expense = await Expense.create({
+    const {
       amount,
       category,
       description,
+      date
+    } = req.body;
+
+    if (
+      amount === undefined ||
+      amount === null ||
+      amount === ""
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Amount is required"
+      });
+    }
+
+    const numericAmount = Number(amount);
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Amount must be a positive number"
+      });
+    }
+
+    if (
+      typeof category !== "string" ||
+      category.trim().length < 2
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Category must contain at least 2 characters"
+      });
+    }
+
+    if (category.trim().length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: "Category cannot exceed 50 characters"
+      });
+    }
+
+    if (
+      description !== undefined &&
+      description !== null &&
+      typeof description !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Description must be a string"
+      });
+    }
+
+    if (
+      description &&
+      description.trim().length > 200
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Description cannot exceed 200 characters"
+      });
+    }
+
+    if (!date || Number.isNaN(new Date(date).getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid date is required"
+      });
+    }
+
+    const expense = await Expense.create({
+      amount: numericAmount,
+      category: category.trim(),
+      description: description?.trim(),
       date
     });
 
@@ -18,27 +88,15 @@ const createExpense = async (req, res) => {
       data: expense
     });
   } catch (error) {
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: Object.values(error.errors).map(
-          (err) => err.message
-        )
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to create expense",
-      error: error.message
-    });
+    next(error);
   }
 };
 
-const getExpenses = async (req, res) => {
+const getExpenses = async (req, res, next) => {
   try {
-    const expenses = await Expense.find().sort({ date: -1 });
+    const expenses = await Expense
+      .find()
+      .sort({ date: -1 });
 
     res.status(200).json({
       success: true,
@@ -46,15 +104,11 @@ const getExpenses = async (req, res) => {
       data: expenses
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch expenses",
-      error: error.message
-    });
+    next(error);
   }
 };
 
-const updateExpense = async (req, res) => {
+const updateExpense = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -65,14 +119,84 @@ const updateExpense = async (req, res) => {
       });
     }
 
-    const { amount, category, description, date } = req.body;
+    const {
+      amount,
+      category,
+      description,
+      date
+    } = req.body;
+
+    if (
+      amount === undefined ||
+      amount === null ||
+      amount === ""
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Amount is required"
+      });
+    }
+
+    const numericAmount = Number(amount);
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Amount must be a positive number"
+      });
+    }
+
+    if (
+      typeof category !== "string" ||
+      category.trim().length < 2
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Category must contain at least 2 characters"
+      });
+    }
+
+    if (category.trim().length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: "Category cannot exceed 50 characters"
+      });
+    }
+
+    if (
+      description !== undefined &&
+      description !== null &&
+      typeof description !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Description must be a string"
+      });
+    }
+
+    if (
+      description &&
+      description.trim().length > 200
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Description cannot exceed 200 characters"
+      });
+    }
+
+    if (!date || Number.isNaN(new Date(date).getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid date is required"
+      });
+    }
 
     const expense = await Expense.findByIdAndUpdate(
       id,
       {
-        amount,
-        category,
-        description,
+        amount: numericAmount,
+        category: category.trim(),
+        description: description?.trim(),
         date
       },
       {
@@ -94,15 +218,11 @@ const updateExpense = async (req, res) => {
       data: expense
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update expense",
-      error: error.message
-    });
+    next(error);
   }
 };
 
-const deleteExpense = async (req, res) => {
+const deleteExpense = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -127,11 +247,7 @@ const deleteExpense = async (req, res) => {
       message: "Expense deleted successfully"
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete expense",
-      error: error.message
-    });
+    next(error);
   }
 };
 

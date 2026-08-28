@@ -12,6 +12,8 @@ function EditExpenseForm({
     date: ""
   });
 
+  const [error, setError] = useState("");
+
   useEffect(() => {
     if (expense) {
       setFormData({
@@ -22,6 +24,8 @@ function EditExpenseForm({
           ? expense.date.split("T")[0]
           : ""
       });
+
+      setError("");
     }
   }, [expense]);
 
@@ -37,9 +41,35 @@ function EditExpenseForm({
   const handleSubmit = (event) => {
     event.preventDefault();
 
+    setError("");
+
+    const numericAmount = Number(formData.amount);
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setError("Amount must be greater than 0");
+      return;
+    }
+
+    if (formData.category.trim().length < 2) {
+      setError("Category must contain at least 2 characters");
+      return;
+    }
+
+    if (formData.category.trim().length > 50) {
+      setError("Category cannot exceed 50 characters");
+      return;
+    }
+
+    if (formData.description.trim().length > 200) {
+      setError("Description cannot exceed 200 characters");
+      return;
+    }
+
     onSave({
       ...formData,
-      amount: Number(formData.amount)
+      amount: numericAmount,
+      category: formData.category.trim(),
+      description: formData.description.trim()
     });
   };
 
@@ -51,12 +81,15 @@ function EditExpenseForm({
     <form onSubmit={handleSubmit}>
       <h2>Edit Expense</h2>
 
+      {error && <p>{error}</p>}
+
       <input
         type="number"
         name="amount"
         value={formData.amount}
         onChange={handleChange}
-        min="1"
+        min="0.01"
+        step="0.01"
         required
       />
 
@@ -65,6 +98,8 @@ function EditExpenseForm({
         name="category"
         value={formData.category}
         onChange={handleChange}
+        minLength={2}
+        maxLength={50}
         required
       />
 
@@ -73,6 +108,7 @@ function EditExpenseForm({
         name="description"
         value={formData.description}
         onChange={handleChange}
+        maxLength={200}
       />
 
       <input
