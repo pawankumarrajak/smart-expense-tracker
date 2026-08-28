@@ -76,6 +76,7 @@ const createExpense = async (req, res, next) => {
     }
 
     const expense = await Expense.create({
+      user: req.user.userId,
       amount: numericAmount,
       category: category.trim(),
       description: description?.trim(),
@@ -95,7 +96,9 @@ const createExpense = async (req, res, next) => {
 const getExpenses = async (req, res, next) => {
   try {
     const expenses = await Expense
-      .find()
+      .find({
+        user: req.user.userId
+      })
       .sort({ date: -1 });
 
     res.status(200).json({
@@ -191,8 +194,11 @@ const updateExpense = async (req, res, next) => {
       });
     }
 
-    const expense = await Expense.findByIdAndUpdate(
-      id,
+    const expense = await Expense.findOneAndUpdate(
+      {
+        _id: id,
+        user: req.user.userId
+      },
       {
         amount: numericAmount,
         category: category.trim(),
@@ -233,7 +239,10 @@ const deleteExpense = async (req, res, next) => {
       });
     }
 
-    const expense = await Expense.findByIdAndDelete(id);
+    const expense = await Expense.findOneAndDelete({
+      _id: id,
+      user: req.user.userId
+    });
 
     if (!expense) {
       return res.status(404).json({

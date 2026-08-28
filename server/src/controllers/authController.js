@@ -1,21 +1,19 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const generateToken = require("../utils/generateToken");
 
 const registerUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validate required fields
     if (!name || !email || !password) {
       const error = new Error(
         "Name, email and password are required"
       );
-
       error.statusCode = 400;
       return next(error);
     }
 
-    // Validate name
     if (
       typeof name !== "string" ||
       name.trim().length < 2
@@ -23,7 +21,6 @@ const registerUser = async (req, res, next) => {
       const error = new Error(
         "Name must contain at least 2 characters"
       );
-
       error.statusCode = 400;
       return next(error);
     }
@@ -32,12 +29,10 @@ const registerUser = async (req, res, next) => {
       const error = new Error(
         "Name cannot exceed 50 characters"
       );
-
       error.statusCode = 400;
       return next(error);
     }
 
-    // Validate email
     if (
       typeof email !== "string" ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
@@ -45,12 +40,10 @@ const registerUser = async (req, res, next) => {
       const error = new Error(
         "Please provide a valid email address"
       );
-
       error.statusCode = 400;
       return next(error);
     }
 
-    // Validate password
     if (
       typeof password !== "string" ||
       password.length < 8
@@ -58,14 +51,12 @@ const registerUser = async (req, res, next) => {
       const error = new Error(
         "Password must contain at least 8 characters"
       );
-
       error.statusCode = 400;
       return next(error);
     }
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check existing user
     const existingUser = await User.findOne({
       email: normalizedEmail
     });
@@ -74,22 +65,18 @@ const registerUser = async (req, res, next) => {
       const error = new Error(
         "An account with this email already exists"
       );
-
       error.statusCode = 409;
       return next(error);
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword
     });
 
-    // Never return password
     res.status(201).json({
       success: true,
       message: "User registered successfully",
@@ -105,6 +92,86 @@ const registerUser = async (req, res, next) => {
   }
 };
 
+
+const loginUser = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      const error = new Error(
+        "Email and password are required"
+      );
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (
+      typeof email !== "string" ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
+      const error = new Error(
+        "Please provide a valid email address"
+      );
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (typeof password !== "string") {
+      const error = new Error(
+        "Password must be a valid string"
+      );
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({
+      email: normalizedEmail
+    }).select("+password");
+
+    if (!user) {
+      const error = new Error(
+        "Invalid email or password"
+      );
+      error.statusCode = 401;
+      return next(error);
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isPasswordValid) {
+      const error = new Error(
+        "Invalid email or password"
+      );
+      error.statusCode = 401;
+      return next(error);
+    }
+
+    const token = generateToken(user._id.toString());
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: {
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
-  registerUser
+  registerUser,
+  loginUser
 };
