@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
 
+function getTodayDate() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function EditExpenseForm({
   expense,
   onSave,
@@ -13,20 +23,23 @@ function EditExpenseForm({
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (expense) {
-      setFormData({
-        amount: expense.amount,
-        category: expense.category,
-        description: expense.description || "",
-        date: expense.date
-          ? expense.date.split("T")[0]
-          : ""
-      });
-
-      setError("");
+    if (!expense) {
+      return;
     }
+
+    setFormData({
+      amount: expense.amount ?? "",
+      category: expense.category || "",
+      description: expense.description || "",
+      date: expense.date
+        ? expense.date.split("T")[0]
+        : ""
+    });
+
+    setError("");
   }, [expense]);
 
   const handleChange = (event) => {
@@ -36,41 +49,81 @@ function EditExpenseForm({
       ...previousData,
       [name]: value
     }));
+
+    if (error) {
+      setError("");
+    }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    setError("");
+    const amount = Number(formData.amount);
 
-    const numericAmount = Number(formData.amount);
+    const category = formData.category
+      .trim()
+      .replace(/\s+/g, " ");
 
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    const description = formData.description
+      .trim()
+      .replace(/\s+/g, " ");
+
+    const date = formData.date;
+
+    if (!Number.isFinite(amount) || amount <= 0) {
       setError("Amount must be greater than 0");
       return;
     }
 
-    if (formData.category.trim().length < 2) {
+    if (amount > 100000000) {
+      setError("Amount cannot exceed ₹10,00,00,000");
+      return;
+    }
+
+    if (category.length < 2) {
       setError("Category must contain at least 2 characters");
       return;
     }
 
-    if (formData.category.trim().length > 50) {
+    if (category.length > 50) {
       setError("Category cannot exceed 50 characters");
       return;
     }
 
-    if (formData.description.trim().length > 200) {
+    if (description.length > 200) {
       setError("Description cannot exceed 200 characters");
       return;
     }
 
-    onSave({
-      ...formData,
-      amount: numericAmount,
-      category: formData.category.trim(),
-      description: formData.description.trim()
-    });
+    if (!date) {
+      setError("Please select a date");
+      return;
+    }
+
+    if (date > getTodayDate()) {
+      setError("Expense date cannot be in the future");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+
+      await onSave({
+        amount,
+        category:
+          category.charAt(0).toUpperCase() +
+          category.slice(1),
+        description,
+        date
+      });
+    } catch (error) {
+      setError(
+        error.message || "Failed to update expense"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!expense) {
@@ -78,58 +131,134 @@ function EditExpenseForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Edit Expense</h2>
+    <div className="edit-expense-form">
+      <div className="section-heading">
+        <div>
+          <span className="section-eyebrow">
+            Expense management
+          </span>
 
-      {error && <p>{error}</p>}
+          <h2>Edit Expense</h2>
 
-      <input
-        type="number"
-        name="amount"
-        value={formData.amount}
-        onChange={handleChange}
-        min="0.01"
-        step="0.01"
-        required
-      />
+          <p>
+            Update the details of your selected expense.
+          </p>
+        </div>
+      </div>
 
-      <input
-        type="text"
-        name="category"
-        value={formData.category}
-        onChange={handleChange}
-        minLength={2}
-        maxLength={50}
-        required
-      />
+      {error && (
+        <div
+          className="form-error"
+          role="alert"
+          aria-live="polite"
+        >
+          {error}
+        </div>
+      )}
 
-      <input
-        type="text"
-        name="description"
-        value={formData.description}
-        onChange={handleChange}
-        maxLength={200}
-      />
+      <form onSubmit={handleSubmit}>
+        <div className="form-field">
+          <label htmlFor="edit-expense-amount">
+            Amount
+          </label>
 
-      <input
-        type="date"
-        name="date"
-        value={formData.date}
-        onChange={handleChange}
-        required
-      />
+          <div className="input-with-prefix">
+            <span aria-hidden="true">₹</span>
 
-      <button type="submit">
-        Save Changes
-      </button>
+            <input
+              id="edit-expense-amount"
+              type="number"
+              name="amount"
+              placeholder="0.00"
+              value={formData.amount}
+              onChange={handleChange}
+              min="0.01"
+              max="100000000"
+              step="0.01"
+              inputMode="decimal"
+              required
+              disabled={loading}
+            />
+          </div>
+        </div>
 
-      <button
-        type="button"
-        onClick={onCancel}
-      >
-        Cancel
-      </button>
-    </form>
+        <div className="form-field">
+          <label htmlFor="edit-expense-category">
+            Category
+          </label>
+
+          <input
+            id="edit-expense-category"
+            type="text"
+            name="category"
+            placeholder="e.g. Food"
+            value={formData.category}
+            onChange={handleChange}
+            minLength={2}
+            maxLength={50}
+            autoComplete="off"
+            required
+            disabled={loading}
+          />
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="edit-expense-description">
+            Description
+          </label>
+
+          <input
+            id="edit-expense-description"
+            type="text"
+            name="description"
+            placeholder="What was this expense for?"
+            value={formData.description}
+            onChange={handleChange}
+            maxLength={200}
+            autoComplete="off"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="edit-expense-date">
+            Date
+          </label>
+
+          <input
+            id="edit-expense-date"
+            type="date"
+            name="date"
+            value={formData.date}
+            onChange={handleChange}
+            max={getTodayDate()}
+            required
+            disabled={loading}
+          />
+        </div>
+
+        <div className="form-actions">
+          <button
+            className="primary-action"
+            type="submit"
+            disabled={loading}
+          >
+            {loading
+              ? "Saving changes..."
+              : "Save Changes"}
+          </button>
+
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

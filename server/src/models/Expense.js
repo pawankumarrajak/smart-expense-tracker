@@ -24,7 +24,15 @@ const expenseSchema = new mongoose.Schema(
       required: [true, "Category is required"],
       trim: true,
       minlength: [2, "Category must contain at least 2 characters"],
-      maxlength: [50, "Category cannot exceed 50 characters"]
+      maxlength: [50, "Category cannot exceed 50 characters"],
+      set: (value) => {
+        const normalized = value.trim().toLowerCase();
+
+        return (
+          normalized.charAt(0).toUpperCase() +
+          normalized.slice(1)
+        );
+      }
     },
 
     description: {

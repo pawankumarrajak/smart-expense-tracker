@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-
-import CurrencyConverter from "./components/CurrencyConverter";
+import Login from "./components/Login";
+import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import ExpenseForm from "./components/ExpenseForm";
 import ExpenseList from "./components/ExpenseList";
 import EditExpenseForm from "./components/EditExpenseForm";
+import CurrencyConverter from "./components/CurrencyConverter";
 import Footer from "./components/Footer";
-
 import {
   getExpenses,
   updateExpense,
@@ -14,69 +14,150 @@ import {
 } from "./services/expenseApi";
 
 function App() {
-  const [expenses, setExpenses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [editingExpense, setEditingExpense] = useState(null);
-
-  // Load expenses
-  const loadExpenses = async () => {
+  const [user, setUser] = useState(() => {
     try {
-      setLoading(true);
+      const savedUser = localStorage.getItem("user");
 
-      const result = await getExpenses();
-
-      setExpenses(result.data);
-      setError("");
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
+      return savedUser
+        ? JSON.parse(savedUser)
+        : null;
+    } catch {
+      localStorage.removeItem("user");
+      return null;
     }
-  };
+  });
+
+  const [expenses, setExpenses] = useState([]);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] =
+    useState(false);
+  const [error, setError] = useState("");
+  const [showRegister, setShowRegister] =
+    useState(false);
 
   useEffect(() => {
-    loadExpenses();
-  }, []);
+    if (!user) {
+      return;
+    }
 
-  // Handle newly created expense
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      handleLogout();
+      return;
+    }
+
+    const loadExpenses = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const result = await getExpenses();
+
+        setExpenses(
+          Array.isArray(result?.data)
+            ? result.data
+            : []
+        );
+      } catch (error) {
+        setError(
+          error?.message ||
+            "Failed to load expenses."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExpenses();
+  }, [user]);
+
+  const handleLogin = (loggedInUser) => {
+    setUser(loggedInUser);
+    setShowRegister(false);
+    setError("");
+  };
+
+  const handleRegister = () => {
+    setShowRegister(false);
+    setError("");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setUser(null);
+    setExpenses([]);
+    setEditingExpense(null);
+    setError("");
+    setLoading(false);
+    setActionLoading(false);
+  };
+
   const handleExpenseCreated = (newExpense) => {
+    if (!newExpense) {
+      return;
+    }
+
     setExpenses((previousExpenses) => [
       newExpense,
       ...previousExpenses
     ]);
+
+    setError("");
   };
 
-  // Handle edit
   const handleEdit = (expense) => {
+    if (!expense) {
+      return;
+    }
+
     setEditingExpense(expense);
+    setError("");
   };
 
-  // Handle update
   const handleUpdate = async (updatedData) => {
+    if (!editingExpense?._id) {
+      return;
+    }
+
     try {
+      setActionLoading(true);
+      setError("");
+
       const result = await updateExpense(
         editingExpense._id,
         updatedData
       );
 
-      setExpenses((previousExpenses) =>
-        previousExpenses.map((expense) =>
-          expense._id === editingExpense._id
-            ? result.data
-            : expense
-        )
-      );
+      if (result?.data) {
+        setExpenses((previousExpenses) =>
+          previousExpenses.map((expense) =>
+            expense._id === editingExpense._id
+              ? result.data
+              : expense
+          )
+        );
+      }
 
       setEditingExpense(null);
-      setError("");
     } catch (error) {
-      setError(error.message);
+      setError(
+        error?.message ||
+          "Failed to update expense."
+      );
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  // Handle delete
-  const handleDelete = async (id) => {
+  const handleDelete = async (expenseId) => {
+    if (!expenseId) {
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this expense?"
     );
@@ -86,90 +167,138 @@ function App() {
     }
 
     try {
-      await deleteExpense(id);
+      setActionLoading(true);
+      setError("");
+
+      await deleteExpense(expenseId);
 
       setExpenses((previousExpenses) =>
         previousExpenses.filter(
-          (expense) => expense._id !== id
+          (expense) =>
+            expense._id !== expenseId
         )
       );
 
-      setError("");
+      if (
+        editingExpense?._id === expenseId
+      ) {
+        setEditingExpense(null);
+      }
     } catch (error) {
-      setError(error.message);
+      setError(
+        error?.message ||
+          "Failed to delete expense."
+      );
+    } finally {
+      setActionLoading(false);
     }
   };
 
+  if (!user) {
+    return (
+      <>
+        {showRegister ? (
+          <Register
+            onRegister={handleRegister}
+            onSwitchToLogin={() =>
+              setShowRegister(false)
+            }
+          />
+        ) : (
+          <Login
+            onLogin={handleLogin}
+            onSwitchToRegister={() =>
+              setShowRegister(true)
+            }
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="app">
-
-      {/* Header */}
       <header className="header">
         <div>
           <h1>Smart Expense Tracker</h1>
-          <p>Manage your expenses easily</p>
+
+          <p>
+            Welcome, {user.name || "User"}
+          </p>
         </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={actionLoading}
+        >
+          Logout
+        </button>
       </header>
 
-      {/* Main Content */}
       <main className="container">
-
-        {/* Dashboard */}
-        <Dashboard expenses={expenses} />
-
-        {/* Expense Form + Currency Converter */}
-        <div className="top-grid">
-
-          <section className="card">
-            <ExpenseForm
-              onExpenseCreated={handleExpenseCreated}
-            />
-          </section>
-
-          <section className="card">
-            <CurrencyConverter />
-          </section>
-
-        </div>
-
-        {/* Edit Expense Form */}
-        {editingExpense && (
-          <section className="card">
-            <EditExpenseForm
-              expense={editingExpense}
-              onSave={handleUpdate}
-              onCancel={() => setEditingExpense(null)}
-            />
-          </section>
-        )}
-
-        {/* Error */}
         {error && (
-          <p className="error">
+          <div
+            className="error"
+            role="alert"
+            aria-live="polite"
+          >
             {error}
-          </p>
+          </div>
         )}
 
-        {/* Expenses List */}
-        <section className="card">
-
-          {loading ? (
+        {loading ? (
+          <div
+            className="card"
+            role="status"
+            aria-live="polite"
+          >
             <p>Loading expenses...</p>
-          ) : (
-            <ExpenseList
-              expenses={expenses}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          )}
+          </div>
+        ) : (
+          <>
+            <Dashboard expenses={expenses} />
 
-        </section>
+            <div className="top-grid">
+              <div className="card">
+                <ExpenseForm
+                  onExpenseCreated={
+                    handleExpenseCreated
+                  }
+                />
+              </div>
 
+              <div className="card">
+                <CurrencyConverter />
+              </div>
+            </div>
+
+            {editingExpense && (
+              <div className="card">
+                <EditExpenseForm
+                  expense={editingExpense}
+                  onSave={handleUpdate}
+                  onCancel={() => {
+                    if (!actionLoading) {
+                      setEditingExpense(null);
+                    }
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="card">
+              <ExpenseList
+                expenses={expenses}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            </div>
+          </>
+        )}
       </main>
 
-      {/* Footer */}
       <Footer />
-
     </div>
   );
 }
