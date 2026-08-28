@@ -9,10 +9,23 @@ const currencyRoutes = require("./routes/currencyRoutes");
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://smart-expense-tracker-41dn.onrender.com"
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE"]
+  })
+);
+
 app.use(express.json());
+
 app.use("/api/currency", currencyRoutes);
 app.use("/api/expenses", expenseRoutes);
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
