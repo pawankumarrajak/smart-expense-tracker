@@ -70,6 +70,7 @@ function EditExpenseForm({
 
     const date = formData.date;
 
+    // Amount validation
     if (!Number.isFinite(amount) || amount <= 0) {
       setError("Amount must be greater than 0");
       return;
@@ -80,28 +81,39 @@ function EditExpenseForm({
       return;
     }
 
+    // Category validation
     if (category.length < 2) {
-      setError("Category must contain at least 2 characters");
+      setError(
+        "Category must contain at least 2 characters"
+      );
       return;
     }
 
     if (category.length > 50) {
-      setError("Category cannot exceed 50 characters");
+      setError(
+        "Category cannot exceed 50 characters"
+      );
       return;
     }
 
+    // Description validation
     if (description.length > 200) {
-      setError("Description cannot exceed 200 characters");
+      setError(
+        "Description cannot exceed 200 characters"
+      );
       return;
     }
 
+    // Date validation
     if (!date) {
       setError("Please select a date");
       return;
     }
 
     if (date > getTodayDate()) {
-      setError("Expense date cannot be in the future");
+      setError(
+        "Expense date cannot be in the future"
+      );
       return;
     }
 
@@ -119,7 +131,8 @@ function EditExpenseForm({
       });
     } catch (error) {
       setError(
-        error.message || "Failed to update expense"
+        error?.message ||
+          "Failed to update expense"
       );
     } finally {
       setLoading(false);
