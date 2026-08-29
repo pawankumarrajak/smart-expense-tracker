@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Expense = require("../models/Expense");
 
+const MAX_EXPENSE_AMOUNT = 100000000;
+
 const createExpense = async (req, res, next) => {
   try {
     const {
@@ -23,10 +25,20 @@ const createExpense = async (req, res, next) => {
 
     const numericAmount = Number(amount);
 
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    if (
+      !Number.isFinite(numericAmount) ||
+      numericAmount <= 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "Amount must be a positive number"
+      });
+    }
+
+    if (numericAmount > MAX_EXPENSE_AMOUNT) {
+      return res.status(400).json({
+        success: false,
+        message: "Amount cannot exceed ₹10,00,00,000"
       });
     }
 
@@ -36,14 +48,16 @@ const createExpense = async (req, res, next) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Category must contain at least 2 characters"
+        message:
+          "Category must contain at least 2 characters"
       });
     }
 
     if (category.trim().length > 50) {
       return res.status(400).json({
         success: false,
-        message: "Category cannot exceed 50 characters"
+        message:
+          "Category cannot exceed 50 characters"
       });
     }
 
@@ -64,14 +78,28 @@ const createExpense = async (req, res, next) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Description cannot exceed 200 characters"
+        message:
+          "Description cannot exceed 200 characters"
       });
     }
 
-    if (!date || Number.isNaN(new Date(date).getTime())) {
+    if (
+      !date ||
+      Number.isNaN(new Date(date).getTime())
+    ) {
       return res.status(400).json({
         success: false,
         message: "A valid date is required"
+      });
+    }
+
+    const expenseDate = new Date(date);
+
+    if (expenseDate > new Date()) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Expense date cannot be in the future"
       });
     }
 
@@ -142,10 +170,20 @@ const updateExpense = async (req, res, next) => {
 
     const numericAmount = Number(amount);
 
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    if (
+      !Number.isFinite(numericAmount) ||
+      numericAmount <= 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "Amount must be a positive number"
+      });
+    }
+
+    if (numericAmount > MAX_EXPENSE_AMOUNT) {
+      return res.status(400).json({
+        success: false,
+        message: "Amount cannot exceed ₹10,00,00,000"
       });
     }
 
@@ -155,14 +193,16 @@ const updateExpense = async (req, res, next) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Category must contain at least 2 characters"
+        message:
+          "Category must contain at least 2 characters"
       });
     }
 
     if (category.trim().length > 50) {
       return res.status(400).json({
         success: false,
-        message: "Category cannot exceed 50 characters"
+        message:
+          "Category cannot exceed 50 characters"
       });
     }
 
@@ -183,14 +223,28 @@ const updateExpense = async (req, res, next) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Description cannot exceed 200 characters"
+        message:
+          "Description cannot exceed 200 characters"
       });
     }
 
-    if (!date || Number.isNaN(new Date(date).getTime())) {
+    if (
+      !date ||
+      Number.isNaN(new Date(date).getTime())
+    ) {
       return res.status(400).json({
         success: false,
         message: "A valid date is required"
+      });
+    }
+
+    const expenseDate = new Date(date);
+
+    if (expenseDate > new Date()) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Expense date cannot be in the future"
       });
     }
 
