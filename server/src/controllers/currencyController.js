@@ -2,24 +2,28 @@ const {
   getExchangeRate
 } = require("../services/currencyService");
 
-const convertCurrency = async (req, res) => {
+const convertCurrency = async (req, res, next) => {
   try {
     const { from, to, amount } = req.query;
 
     if (!from || !to || !amount) {
-      return res.status(400).json({
-        success: false,
-        message: "from, to and amount are required"
-      });
+      const error = new Error(
+        "from, to and amount are required"
+      );
+
+      error.statusCode = 400;
+      return next(error);
     }
 
     const numericAmount = Number(amount);
 
-    if (Number.isNaN(numericAmount) || numericAmount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Amount must be a positive number"
-      });
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      const error = new Error(
+        "Amount must be a positive number"
+      );
+
+      error.statusCode = 400;
+      return next(error);
     }
 
     const result = await getExchangeRate(
@@ -27,8 +31,9 @@ const convertCurrency = async (req, res) => {
       to.toUpperCase()
     );
 
-    const convertedAmount =
-      numericAmount * result.conversion_rate;
+    const convertedAmount = Number(
+      (numericAmount * result.conversion_rate).toFixed(2)
+    );
 
     res.status(200).json({
       success: true,
@@ -41,12 +46,7 @@ const convertCurrency = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Currency conversion error:", error.message);
-
-    res.status(500).json({
-      success: false,
-      message: "Currency conversion failed"
-    });
+    next(error);
   }
 };
 
