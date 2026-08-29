@@ -4,9 +4,9 @@ A full-stack expense management application built with **React, Node.js, Express
 
 ## 🚀 Live Project
 
-**Frontend:** Add your deployed frontend URL here
+**Frontend:** https://smart-expense-tracker-41dn.onrender.com
 
-**Backend API:** Add your deployed backend URL here
+**Backend API:** https://smart-expense-tracker-api-uvcs.onrender.com
 
 ## ✨ Features
 
