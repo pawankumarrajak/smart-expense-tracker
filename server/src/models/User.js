@@ -28,6 +28,21 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: [8, "Password must contain at least 8 characters"],
       select: false
+    },
+
+    isEmailVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    emailVerificationToken: {
+      type: String,
+      select: false
+    },
+
+    emailVerificationExpires: {
+      type: Date,
+      select: false
     }
   },
   {

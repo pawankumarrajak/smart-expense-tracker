@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Login from "./components/Login";
 import Register from "./components/Register";
+import VerifyEmail from "./components/VerifyEmail";
 import Dashboard from "./components/Dashboard";
 import ExpenseForm from "./components/ExpenseForm";
 import ExpenseList from "./components/ExpenseList";
@@ -35,6 +36,9 @@ function App() {
   const [error, setError] = useState("");
   const [showRegister, setShowRegister] =
     useState(false);
+
+  const isEmailVerificationPage =
+    window.location.pathname === "/verify-email";
 
   useEffect(() => {
     if (!user) {
@@ -193,6 +197,23 @@ function App() {
       setActionLoading(false);
     }
   };
+
+  if (isEmailVerificationPage) {
+    return (
+      <VerifyEmail
+        onVerified={() => {
+          window.history.replaceState(
+            {},
+            "",
+            "/"
+          );
+
+          setShowRegister(false);
+          setError("");
+        }}
+      />
+    );
+  }
 
   if (!user) {
     return (

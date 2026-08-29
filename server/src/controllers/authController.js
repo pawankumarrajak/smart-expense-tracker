@@ -1,6 +1,12 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
+const {
+  sendVerificationEmail
+} = require("../services/emailService");
+
 
 const registerUser = async (req, res, next) => {
   try {
@@ -35,7 +41,9 @@ const registerUser = async (req, res, next) => {
 
     if (
       typeof email !== "string" ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        email.trim()
+      )
     ) {
       const error = new Error(
         "Please provide a valid email address"
@@ -55,7 +63,8 @@ const registerUser = async (req, res, next) => {
       return next(error);
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail =
+      email.trim().toLowerCase();
 
     const existingUser = await User.findOne({
       email: normalizedEmail
@@ -69,23 +78,106 @@ const registerUser = async (req, res, next) => {
       return next(error);
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      12
+    );
+
+    const verificationToken =
+      crypto.randomBytes(32).toString("hex");
+
+    const verificationExpires = new Date(
+      Date.now() + 15 * 60 * 1000
+    );
 
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
-      password: hashedPassword
+      password: hashedPassword,
+      isEmailVerified: false,
+      emailVerificationToken: verificationToken,
+      emailVerificationExpires: verificationExpires
     });
+
+    const verificationUrl =
+      `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+
+    try {
+      await sendVerificationEmail(
+        user.email,
+        user.name,
+        verificationUrl
+      );
+    } catch (emailError) {
+      await User.findByIdAndDelete(user._id);
+
+      const error = new Error(
+        "Unable to send verification email. Please try again."
+      );
+      error.statusCode = 503;
+      return next(error);
+    }
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully",
+      message:
+        "Account created. Please check your email to verify your account.",
       data: {
         id: user._id,
         name: user.name,
         email: user.email,
+        isEmailVerified: user.isEmailVerified,
         createdAt: user.createdAt
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+
+    if (
+      typeof token !== "string" ||
+      !token.trim()
+    ) {
+      const error = new Error(
+        "Verification token is required"
+      );
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const user = await User.findOne({
+      emailVerificationToken: token.trim(),
+      emailVerificationExpires: {
+        $gt: new Date()
+      }
+    }).select(
+      "+emailVerificationToken +emailVerificationExpires"
+    );
+
+    if (!user) {
+      const error = new Error(
+        "Invalid or expired verification link."
+      );
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Email verified successfully. You can now login."
     });
   } catch (error) {
     next(error);
@@ -107,7 +199,9 @@ const loginUser = async (req, res, next) => {
 
     if (
       typeof email !== "string" ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        email.trim()
+      )
     ) {
       const error = new Error(
         "Please provide a valid email address"
@@ -124,11 +218,14 @@ const loginUser = async (req, res, next) => {
       return next(error);
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail =
+      email.trim().toLowerCase();
 
     const user = await User.findOne({
       email: normalizedEmail
-    }).select("+password");
+    }).select(
+      "+password +emailVerificationToken +emailVerificationExpires"
+    );
 
     if (!user) {
       const error = new Error(
@@ -138,10 +235,11 @@ const loginUser = async (req, res, next) => {
       return next(error);
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      user.password
-    );
+    const isPasswordValid =
+      await bcrypt.compare(
+        password,
+        user.password
+      );
 
     if (!isPasswordValid) {
       const error = new Error(
@@ -151,7 +249,17 @@ const loginUser = async (req, res, next) => {
       return next(error);
     }
 
-    const token = generateToken(user._id.toString());
+    if (!user.isEmailVerified) {
+      const error = new Error(
+        "Please verify your email before logging in."
+      );
+      error.statusCode = 403;
+      return next(error);
+    }
+
+    const token = generateToken(
+      user._id.toString()
+    );
 
     res.status(200).json({
       success: true,
@@ -161,7 +269,8 @@ const loginUser = async (req, res, next) => {
         user: {
           id: user._id,
           name: user.name,
-          email: user.email
+          email: user.email,
+          isEmailVerified: user.isEmailVerified
         }
       }
     });
@@ -173,5 +282,6 @@ const loginUser = async (req, res, next) => {
 
 module.exports = {
   registerUser,
+  verifyEmail,
   loginUser
 };
