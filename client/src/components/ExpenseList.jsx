@@ -1,17 +1,24 @@
 import { useMemo, useState } from "react";
+import CustomSelect from "./CustomSelect";
 
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2
-});
+const currencyFormatter = new Intl.NumberFormat(
+  "en-IN",
+  {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }
+);
 
-const dateFormatter = new Intl.DateTimeFormat("en-IN", {
-  day: "numeric",
-  month: "short",
-  year: "numeric"
-});
+const dateFormatter = new Intl.DateTimeFormat(
+  "en-IN",
+  {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  }
+);
 
 function formatCurrency(amount) {
   const numericAmount = Number(amount);
@@ -50,7 +57,9 @@ function ExpenseList({
     const uniqueCategories = [
       ...new Set(
         expenses
-          .map((expense) => expense.category?.trim())
+          .map((expense) =>
+            expense.category?.trim()
+          )
           .filter(Boolean)
       )
     ];
@@ -63,18 +72,53 @@ function ExpenseList({
     ];
   }, [expenses]);
 
+  const categoryOptions = useMemo(
+    () =>
+      categories.map((item) => ({
+        value: item,
+        label: item
+      })),
+    [categories]
+  );
+
+  const sortOptions = [
+    {
+      value: "newest",
+      label: "Newest first"
+    },
+    {
+      value: "oldest",
+      label: "Oldest first"
+    },
+    {
+      value: "highest",
+      label: "Highest amount"
+    },
+    {
+      value: "lowest",
+      label: "Lowest amount"
+    }
+  ];
+
   const filteredExpenses = useMemo(() => {
-    const searchText = search.trim().toLowerCase();
+    const searchText =
+      search.trim().toLowerCase();
 
     const result = expenses.filter((expense) => {
       const expenseCategory =
-        expense.category?.trim().toLowerCase() || "";
+        expense.category
+          ?.trim()
+          .toLowerCase() || "";
 
       const expenseDescription =
-        expense.description?.trim().toLowerCase() || "";
+        expense.description
+          ?.trim()
+          .toLowerCase() || "";
 
       const expenseAmount =
-        String(expense.amount ?? "").toLowerCase();
+        String(
+          expense.amount ?? ""
+        ).toLowerCase();
 
       const matchesSearch =
         !searchText ||
@@ -84,9 +128,13 @@ function ExpenseList({
 
       const matchesCategory =
         category === "All" ||
-        expenseCategory === category.toLowerCase();
+        expenseCategory ===
+          category.toLowerCase();
 
-      return matchesSearch && matchesCategory;
+      return (
+        matchesSearch &&
+        matchesCategory
+      );
     });
 
     return [...result].sort((a, b) => {
@@ -98,10 +146,16 @@ function ExpenseList({
           );
 
         case "highest":
-          return Number(b.amount) - Number(a.amount);
+          return (
+            Number(b.amount) -
+            Number(a.amount)
+          );
 
         case "lowest":
-          return Number(a.amount) - Number(b.amount);
+          return (
+            Number(a.amount) -
+            Number(b.amount)
+          );
 
         case "newest":
         default:
@@ -189,70 +243,34 @@ function ExpenseList({
             />
           </div>
 
-          <div className="filter-field">
-            <label htmlFor="expense-category-filter">
-              Category
-            </label>
+          <CustomSelect
+            id="expense-category-filter"
+            label="Category"
+            value={category}
+            options={categoryOptions}
+            onChange={setCategory}
+          />
 
-            <select
-              id="expense-category-filter"
-              value={category}
-              onChange={(event) =>
-                setCategory(event.target.value)
-              }
-            >
-              {categories.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                >
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-field">
-            <label htmlFor="expense-sort">
-              Sort by
-            </label>
-
-            <select
-              id="expense-sort"
-              value={sortBy}
-              onChange={(event) =>
-                setSortBy(event.target.value)
-              }
-            >
-              <option value="newest">
-                Newest first
-              </option>
-
-              <option value="oldest">
-                Oldest first
-              </option>
-
-              <option value="highest">
-                Highest amount
-              </option>
-
-              <option value="lowest">
-                Lowest amount
-              </option>
-            </select>
-          </div>
+          <CustomSelect
+            id="expense-sort"
+            label="Sort by"
+            value={sortBy}
+            options={sortOptions}
+            onChange={setSortBy}
+          />
         </div>
       )}
 
-      {filtersActive && expenses.length > 0 && (
-        <button
-          className="clear-filters-button"
-          type="button"
-          onClick={clearFilters}
-        >
-          Clear filters
-        </button>
-      )}
+      {filtersActive &&
+        expenses.length > 0 && (
+          <button
+            className="clear-filters-button"
+            type="button"
+            onClick={clearFilters}
+          >
+            Clear filters
+          </button>
+        )}
 
       {filteredExpenses.length === 0 ? (
         <div className="empty-state">
@@ -287,70 +305,79 @@ function ExpenseList({
         </div>
       ) : (
         <div className="expense-items">
-          {filteredExpenses.map((expense) => (
-            <article
-              key={expense._id}
-              className="expense-item"
-            >
-              <div className="expense-main">
-                <div
-                  className="expense-icon"
-                  aria-hidden="true"
-                >
-                  ₹
-                </div>
-
-                <div className="expense-details">
-                  <h3>
-                    {formatCurrency(expense.amount)}
-                  </h3>
-
-                  <div className="expense-meta">
-                    <span className="expense-category">
-                      {expense.category || "Uncategorized"}
-                    </span>
-
-                    <span>
-                      {formatDate(expense.date)}
-                    </span>
+          {filteredExpenses.map(
+            (expense) => (
+              <article
+                key={expense._id}
+                className="expense-item"
+              >
+                <div className="expense-main">
+                  <div
+                    className="expense-icon"
+                    aria-hidden="true"
+                  >
+                    ₹
                   </div>
 
-                  <p>
-                    {expense.description?.trim() ||
-                      "No description"}
-                  </p>
+                  <div className="expense-details">
+                    <h3>
+                      {formatCurrency(
+                        expense.amount
+                      )}
+                    </h3>
+
+                    <div className="expense-meta">
+                      <span className="expense-category">
+                        {expense.category ||
+                          "Uncategorized"}
+                      </span>
+
+                      <span>
+                        {formatDate(
+                          expense.date
+                        )}
+                      </span>
+                    </div>
+
+                    <p>
+                      {expense.description?.trim() ||
+                        "No description"}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="expense-actions">
-                <button
-                  className="edit-button"
-                  type="button"
-                  onClick={() =>
-                    handleEdit(expense)
-                  }
-                  aria-label={`Edit expense ${formatCurrency(
-                    expense.amount
-                  )}`}
-                >
-                  Edit
-                </button>
+                <div className="expense-actions">
+                  <button
+                    className="edit-button"
+                    type="button"
+                    onClick={() =>
+                      handleEdit(expense)
+                    }
+                    aria-label={`Edit expense ${formatCurrency(
+                      expense.amount
+                    )}`}
+                  >
+                    Edit
+                  </button>
 
-                <button
-                  className="delete-button"
-                  type="button"
-                  onClick={() =>
-                    handleDelete(expense._id)
-                  }
-                  aria-label={`Delete expense ${formatCurrency(
-                    expense.amount
-                  )}`}
-                >
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
+                  <button
+                    className="delete-button"
+                    type="button"
+                    onClick={() =>
+                      handleDelete(
+                        expense._id
+                      )
+                    }
+                    aria-label={`Delete expense ${formatCurrency(
+                      expense.amount
+                    )}`}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </article>
+            )
+          )}
         </div>
       )}
     </div>

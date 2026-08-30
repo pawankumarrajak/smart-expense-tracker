@@ -11,6 +11,9 @@ import {
   YAxis,
   CartesianGrid
 } from "recharts";
+import CustomSelect from "./CustomSelect";
+
+const MAX_AMOUNT = 100000000;
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -25,12 +28,20 @@ const monthFormatter = new Intl.DateTimeFormat("en-IN", {
 });
 
 function formatCurrency(amount) {
-  return currencyFormatter.format(
-    Number.isFinite(amount) ? amount : 0
-  );
+  const numericAmount = Number(amount);
+
+  if (!Number.isFinite(numericAmount)) {
+    return "₹0.00";
+  }
+
+  return currencyFormatter.format(numericAmount);
 }
 
 function getMonthKey(date) {
+  if (!date) {
+    return null;
+  }
+
   const parsedDate = new Date(date);
 
   if (Number.isNaN(parsedDate.getTime())) {
@@ -63,10 +74,14 @@ function formatMonthLabel(monthKey) {
     1
   );
 
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
   return monthFormatter.format(date);
 }
 
-function Dashboard({ expenses }) {
+function Dashboard({ expenses = [] }) {
   const safeExpenses = Array.isArray(expenses)
     ? expenses
     : [];
@@ -86,12 +101,19 @@ function Dashboard({ expenses }) {
       }
     });
 
-    const currentMonth = getCurrentMonthKey();
-
-    months.add(currentMonth);
+    months.add(getCurrentMonthKey());
 
     return [...months].sort().reverse();
   }, [safeExpenses]);
+
+  const monthOptions = useMemo(
+    () =>
+      availableMonths.map((month) => ({
+        value: month,
+        label: formatMonthLabel(month)
+      })),
+    [availableMonths]
+  );
 
   const {
     totalExpense,
@@ -103,9 +125,7 @@ function Dashboard({ expenses }) {
     categoryChartData,
     monthlyChartData
   } = useMemo(() => {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
+    const currentMonthKey = getCurrentMonthKey();
 
     let total = 0;
     let highest = 0;
@@ -117,7 +137,11 @@ function Dashboard({ expenses }) {
     safeExpenses.forEach((expense) => {
       const amount = Number(expense.amount);
 
-      if (!Number.isFinite(amount) || amount < 0) {
+      if (
+        !Number.isFinite(amount) ||
+        amount < 0 ||
+        amount > MAX_AMOUNT
+      ) {
         return;
       }
 
@@ -127,29 +151,28 @@ function Dashboard({ expenses }) {
         highest = amount;
       }
 
-      const expenseDate = new Date(expense.date);
+      const expenseMonthKey = getMonthKey(
+        expense.date
+      );
 
-      if (!Number.isNaN(expenseDate.getTime())) {
-        if (
-          expenseDate.getMonth() === currentMonth &&
-          expenseDate.getFullYear() === currentYear
-        ) {
-          monthlyTotal += amount;
-        }
+      if (
+        expenseMonthKey === currentMonthKey
+      ) {
+        monthlyTotal += amount;
+      }
 
-        const monthKey = getMonthKey(expense.date);
-
-        if (monthKey) {
-          monthlyTotals[monthKey] =
-            (monthlyTotals[monthKey] || 0) + amount;
-        }
+      if (expenseMonthKey) {
+        monthlyTotals[expenseMonthKey] =
+          (monthlyTotals[expenseMonthKey] || 0) +
+          amount;
       }
 
       const category =
         expense.category?.trim() || "Other";
 
       categoryTotals[category] =
-        (categoryTotals[category] || 0) + amount;
+        (categoryTotals[category] || 0) +
+        amount;
     });
 
     const entries = safeExpenses.length;
@@ -207,15 +230,21 @@ function Dashboard({ expenses }) {
     const categoryTotals = {};
 
     safeExpenses.forEach((expense) => {
-      if (
-        getMonthKey(expense.date) !== selectedMonth
-      ) {
+      const expenseMonthKey = getMonthKey(
+        expense.date
+      );
+
+      if (expenseMonthKey !== selectedMonth) {
         return;
       }
 
       const amount = Number(expense.amount);
 
-      if (!Number.isFinite(amount) || amount < 0) {
+      if (
+        !Number.isFinite(amount) ||
+        amount < 0 ||
+        amount > MAX_AMOUNT
+      ) {
         return;
       }
 
@@ -226,7 +255,8 @@ function Dashboard({ expenses }) {
         expense.category?.trim() || "Other";
 
       categoryTotals[category] =
-        (categoryTotals[category] || 0) + amount;
+        (categoryTotals[category] || 0) +
+        amount;
     });
 
     const categories = Object.entries(
@@ -280,6 +310,9 @@ function Dashboard({ expenses }) {
 
   return (
     <div className="dashboard">
+
+      {/* SUMMARY CARDS */}
+
       <div className="dashboard-grid">
         {statCards.map((stat) => (
           <div
@@ -288,7 +321,10 @@ function Dashboard({ expenses }) {
               stat.className || ""
             }`}
           >
-            <div className="stat-icon">
+            <div
+              className="stat-icon"
+              aria-hidden="true"
+            >
               {stat.icon}
             </div>
 
@@ -301,6 +337,8 @@ function Dashboard({ expenses }) {
         ))}
       </div>
 
+      {/* MONTHLY SPENDING */}
+
       <div className="card analytics-section">
         <div className="section-heading">
           <div>
@@ -311,37 +349,30 @@ function Dashboard({ expenses }) {
             <h2>Monthly Spending</h2>
 
             <p>
-              Review your spending for a selected month.
+              Review your spending for a selected
+              month.
             </p>
           </div>
 
-          <div className="filter-field">
-            <label htmlFor="analytics-month">
-              Select month
-            </label>
-
-            <select
-              id="analytics-month"
-              value={selectedMonth}
-              onChange={(event) =>
-                setSelectedMonth(event.target.value)
-              }
-            >
-              {availableMonths.map((month) => (
-                <option
-                  key={month}
-                  value={month}
-                >
-                  {formatMonthLabel(month)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            id="analytics-month"
+            label="Select month"
+            value={selectedMonth}
+            options={monthOptions}
+            onChange={setSelectedMonth}
+          />
         </div>
+
+        {/* SELECTED MONTH CARDS */}
 
         <div className="dashboard-grid">
           <div className="stat-card">
-            <div className="stat-icon">₹</div>
+            <div
+              className="stat-icon"
+              aria-hidden="true"
+            >
+              ₹
+            </div>
 
             <div className="stat-content">
               <span>
@@ -357,7 +388,12 @@ function Dashboard({ expenses }) {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon">#</div>
+            <div
+              className="stat-icon"
+              aria-hidden="true"
+            >
+              #
+            </div>
 
             <div className="stat-content">
               <span>Transactions</span>
@@ -369,7 +405,12 @@ function Dashboard({ expenses }) {
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon">↗</div>
+            <div
+              className="stat-icon"
+              aria-hidden="true"
+            >
+              ↗
+            </div>
 
             <div className="stat-content">
               <span>Monthly Average</span>
@@ -382,6 +423,8 @@ function Dashboard({ expenses }) {
             </div>
           </div>
         </div>
+
+        {/* CATEGORY BREAKDOWN */}
 
         {selectedMonthData.categories.length > 0 && (
           <div className="category-summary">
@@ -397,8 +440,8 @@ function Dashboard({ expenses }) {
                 </h2>
 
                 <p>
-                  Where you spent the most during the
-                  selected month.
+                  Where you spent the most during
+                  the selected month.
                 </p>
               </div>
             </div>
@@ -431,6 +474,8 @@ function Dashboard({ expenses }) {
         )}
       </div>
 
+      {/* CATEGORY CHART */}
+
       {categoryChartData.length > 0 && (
         <div className="card analytics-section">
           <div className="section-heading">
@@ -442,13 +487,14 @@ function Dashboard({ expenses }) {
               <h2>Spending by Category</h2>
 
               <p>
-                Distribution of your spending across
-                categories.
+                Distribution of your spending
+                across categories.
               </p>
             </div>
           </div>
 
           <div
+            className="chart-container"
             style={{
               width: "100%",
               height: 320
@@ -491,6 +537,8 @@ function Dashboard({ expenses }) {
         </div>
       )}
 
+      {/* MONTHLY TREND */}
+
       {monthlyChartData.length > 0 && (
         <div className="card analytics-section">
           <div className="section-heading">
@@ -509,6 +557,7 @@ function Dashboard({ expenses }) {
           </div>
 
           <div
+            className="chart-container"
             style={{
               width: "100%",
               height: 320
@@ -524,7 +573,9 @@ function Dashboard({ expenses }) {
                   bottom: 10
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                />
 
                 <XAxis dataKey="label" />
 
@@ -548,6 +599,8 @@ function Dashboard({ expenses }) {
           </div>
         </div>
       )}
+
+      {/* TOP SPENDING CATEGORIES */}
 
       {sortedCategories.length > 0 && (
         <div className="card category-summary">

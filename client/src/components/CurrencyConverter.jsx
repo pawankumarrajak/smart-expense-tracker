@@ -1,7 +1,27 @@
 import { useState } from "react";
 import { convertCurrency } from "../services/currencyApi";
+import CustomSelect from "./CustomSelect";
 
 const MAX_AMOUNT = 100000000;
+
+const currencyOptions = [
+  {
+    value: "USD",
+    label: "USD — US Dollar"
+  },
+  {
+    value: "INR",
+    label: "INR — Indian Rupee"
+  },
+  {
+    value: "EUR",
+    label: "EUR — Euro"
+  },
+  {
+    value: "GBP",
+    label: "GBP — British Pound"
+  }
+];
 
 function CurrencyConverter() {
   const [amount, setAmount] = useState("");
@@ -21,7 +41,9 @@ function CurrencyConverter() {
       !Number.isFinite(numericAmount) ||
       numericAmount <= 0
     ) {
-      setError("Please enter a valid amount greater than 0");
+      setError(
+        "Please enter a valid amount greater than 0"
+      );
       setResult(null);
       return;
     }
@@ -70,6 +92,7 @@ function CurrencyConverter() {
         error?.message ||
           "Unable to convert currency. Please try again."
       );
+
       setResult(null);
     } finally {
       setLoading(false);
@@ -94,10 +117,14 @@ function CurrencyConverter() {
     }
   };
 
-  const handleCurrencyChange = (
-    setter
-  ) => (event) => {
-    setter(event.target.value);
+  const handleFromChange = (value) => {
+    setFrom(value);
+    setResult(null);
+    setError("");
+  };
+
+  const handleToChange = (value) => {
+    setTo(value);
     setResult(null);
     setError("");
   };
@@ -154,34 +181,14 @@ function CurrencyConverter() {
         </div>
 
         <div className="converter-row">
-          <div className="form-field">
-            <label htmlFor="currency-from">
-              From
-            </label>
-
-            <select
-              id="currency-from"
-              value={from}
-              onChange={handleCurrencyChange(setFrom)}
-              disabled={loading}
-            >
-              <option value="USD">
-                USD — US Dollar
-              </option>
-
-              <option value="INR">
-                INR — Indian Rupee
-              </option>
-
-              <option value="EUR">
-                EUR — Euro
-              </option>
-
-              <option value="GBP">
-                GBP — British Pound
-              </option>
-            </select>
-          </div>
+          <CustomSelect
+            id="currency-from"
+            label="From"
+            value={from}
+            options={currencyOptions}
+            onChange={handleFromChange}
+            disabled={loading}
+          />
 
           <button
             type="button"
@@ -194,34 +201,14 @@ function CurrencyConverter() {
             ⇄
           </button>
 
-          <div className="form-field">
-            <label htmlFor="currency-to">
-              To
-            </label>
-
-            <select
-              id="currency-to"
-              value={to}
-              onChange={handleCurrencyChange(setTo)}
-              disabled={loading}
-            >
-              <option value="INR">
-                INR — Indian Rupee
-              </option>
-
-              <option value="USD">
-                USD — US Dollar
-              </option>
-
-              <option value="EUR">
-                EUR — Euro
-              </option>
-
-              <option value="GBP">
-                GBP — British Pound
-              </option>
-            </select>
-          </div>
+          <CustomSelect
+            id="currency-to"
+            label="To"
+            value={to}
+            options={currencyOptions}
+            onChange={handleToChange}
+            disabled={loading}
+          />
         </div>
 
         <button
