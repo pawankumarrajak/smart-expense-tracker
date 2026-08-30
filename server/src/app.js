@@ -12,6 +12,11 @@ const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
+// Render is behind a reverse proxy.
+// Trust the first proxy so express-rate-limit can correctly
+// process X-Forwarded-For headers.
+app.set("trust proxy", 1);
+
 app.use(helmet());
 
 const allowedOrigins = [
