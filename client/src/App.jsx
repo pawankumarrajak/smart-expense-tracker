@@ -19,9 +19,7 @@ function App() {
     try {
       const savedUser = localStorage.getItem("user");
 
-      return savedUser
-        ? JSON.parse(savedUser)
-        : null;
+      return savedUser ? JSON.parse(savedUser) : null;
     } catch {
       localStorage.removeItem("user");
       return null;
@@ -31,11 +29,9 @@ function App() {
   const [expenses, setExpenses] = useState([]);
   const [editingExpense, setEditingExpense] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [actionLoading, setActionLoading] =
-    useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showRegister, setShowRegister] =
-    useState(false);
+  const [showRegister, setShowRegister] = useState(false);
 
   const isEmailVerificationPage =
     window.location.pathname === "/verify-email";
@@ -60,14 +56,11 @@ function App() {
         const result = await getExpenses();
 
         setExpenses(
-          Array.isArray(result?.data)
-            ? result.data
-            : []
+          Array.isArray(result?.data) ? result.data : []
         );
       } catch (error) {
         setError(
-          error?.message ||
-            "Failed to load expenses."
+          error?.message || "Failed to load expenses."
         );
       } finally {
         setLoading(false);
@@ -98,6 +91,21 @@ function App() {
     setError("");
     setLoading(false);
     setActionLoading(false);
+  };
+
+  const handleGoToLogin = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setUser(null);
+    setExpenses([]);
+    setEditingExpense(null);
+    setShowRegister(false);
+    setError("");
+    setLoading(false);
+    setActionLoading(false);
+
+    window.history.replaceState({}, "", "/");
   };
 
   const handleExpenseCreated = (newExpense) => {
@@ -149,8 +157,7 @@ function App() {
       setEditingExpense(null);
     } catch (error) {
       setError(
-        error?.message ||
-          "Failed to update expense."
+        error?.message || "Failed to update expense."
       );
     } finally {
       setActionLoading(false);
@@ -178,20 +185,16 @@ function App() {
 
       setExpenses((previousExpenses) =>
         previousExpenses.filter(
-          (expense) =>
-            expense._id !== expenseId
+          (expense) => expense._id !== expenseId
         )
       );
 
-      if (
-        editingExpense?._id === expenseId
-      ) {
+      if (editingExpense?._id === expenseId) {
         setEditingExpense(null);
       }
     } catch (error) {
       setError(
-        error?.message ||
-          "Failed to delete expense."
+        error?.message || "Failed to delete expense."
       );
     } finally {
       setActionLoading(false);
@@ -201,16 +204,7 @@ function App() {
   if (isEmailVerificationPage) {
     return (
       <VerifyEmail
-        onVerified={() => {
-          window.history.replaceState(
-            {},
-            "",
-            "/"
-          );
-
-          setShowRegister(false);
-          setError("");
-        }}
+        onVerified={handleGoToLogin}
       />
     );
   }
