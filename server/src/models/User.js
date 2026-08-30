@@ -43,7 +43,14 @@ const userSchema = new mongoose.Schema(
     emailVerificationExpires: {
       type: Date,
       select: false
-    }
+    },
+
+    profilePicture: {
+  type: String,
+  default: null,
+  trim: true,
+  maxlength: [500, "Profile picture URL cannot exceed 500 characters"]
+}
   },
   {
     timestamps: true
