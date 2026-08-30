@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendVerificationEmail = async (email, name, verificationUrl) => {
   const { error } = await resend.emails.send({
-    from: process.env.EMAIL_FROM,
+    from: process.env.RESEND_FROM_EMAIL,
     to: email,
     subject: "Verify your Smart Expense Tracker account",
     html: `
