@@ -16,6 +16,7 @@ import ExpenseList from "./components/ExpenseList";
 import EditExpensePage from "./components/EditExpensePage";
 import CurrencyConverter from "./components/CurrencyConverter";
 import Footer from "./components/Footer";
+import Profile from "./components/Profile";
 
 import {
   getExpenses,
@@ -128,7 +129,9 @@ function App() {
 
     setError("");
 
-    navigate(`/expenses/${expense._id}/edit`);
+    navigate(
+      `/expenses/${expense._id}/edit`
+    );
   };
 
   const handleUpdate = async (
@@ -206,9 +209,9 @@ function App() {
     }
   };
 
-  const isDashboardPage =
-    location.pathname === "/";
-
+  /*
+   * Logged-out routes
+   */
   if (!user) {
     return (
       <Routes>
@@ -241,13 +244,18 @@ function App() {
     );
   }
 
+  /*
+   * Logged-in routes
+   */
   return (
     <Routes>
+      {/* Email verification */}
       <Route
         path="/verify-email"
         element={<VerifyEmail />}
       />
 
+      {/* Dashboard */}
       <Route
         path="/"
         element={
@@ -261,13 +269,25 @@ function App() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={actionLoading}
-              >
-                Logout
-              </button>
+              <div className="header-actions">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate("/profile")
+                  }
+                  disabled={actionLoading}
+                >
+                  Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={actionLoading}
+                >
+                  Logout
+                </button>
+              </div>
             </header>
 
             <main className="container">
@@ -327,6 +347,19 @@ function App() {
         }
       />
 
+      {/* Profile */}
+      <Route
+        path="/profile"
+        element={
+          <Profile
+            user={user}
+            onBack={() => navigate("/")}
+            onLogout={handleLogout}
+          />
+        }
+      />
+
+      {/* Edit expense */}
       <Route
         path="/expenses/:id/edit"
         element={
@@ -338,6 +371,7 @@ function App() {
         }
       />
 
+      {/* Unknown route */}
       <Route
         path="*"
         element={
