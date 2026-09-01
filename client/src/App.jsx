@@ -3,7 +3,6 @@ import {
   Navigate,
   Route,
   Routes,
-  useLocation,
   useNavigate
 } from "react-router-dom";
 
@@ -45,8 +44,86 @@ function App() {
   const [showRegister, setShowRegister] = useState(false);
 
   const navigate = useNavigate();
-  const location = useLocation();
 
+  /*
+   * =========================================================
+   * LOAD LATEST PROFILE
+   * =========================================================
+   *
+   * Keeps the Dashboard synchronized with the backend.
+   *
+   * Important:
+   * After uploading a profile picture on the Profile page,
+   * the updated profile is sent back to App.jsx through
+   * onProfileUpdated().
+   */
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      handleLogout();
+      return;
+    }
+
+    const loadProfile = async () => {
+      try {
+        const API_URL =
+          `${import.meta.env.VITE_API_URL}/api/users`;
+
+        const response = await fetch(
+          `${API_URL}/profile`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result?.message ||
+              "Failed to load profile."
+          );
+        }
+
+        if (result?.data) {
+          setUser((previousUser) => {
+            const latestUser = {
+              ...previousUser,
+              ...result.data
+            };
+
+            localStorage.setItem(
+              "user",
+              JSON.stringify(latestUser)
+            );
+
+            return latestUser;
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load latest profile:",
+          error
+        );
+      }
+    };
+
+    loadProfile();
+  }, [user?.id]);
+
+  /*
+   * =========================================================
+   * LOAD EXPENSES
+   * =========================================================
+   */
   useEffect(() => {
     if (!user) {
       return;
@@ -84,18 +161,72 @@ function App() {
     loadExpenses();
   }, [user]);
 
+  /*
+   * =========================================================
+   * LOGIN
+   * =========================================================
+   */
   const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
     setShowRegister(false);
     setError("");
+
+    localStorage.setItem(
+      "user",
+      JSON.stringify(loggedInUser)
+    );
+
     navigate("/");
   };
 
+  /*
+   * =========================================================
+   * REGISTER
+   * =========================================================
+   */
   const handleRegister = () => {
     setShowRegister(false);
     setError("");
   };
 
+  /*
+   * =========================================================
+   * PROFILE UPDATED
+   * =========================================================
+   *
+   * Called by Profile.jsx after profile picture upload.
+   *
+   * This updates:
+   * 1. React user state
+   * 2. localStorage user
+   *
+   * Therefore Dashboard immediately gets the new image.
+   */
+  const handleProfileUpdated = (updatedProfile) => {
+    if (!updatedProfile) {
+      return;
+    }
+
+    setUser((previousUser) => {
+      const updatedUser = {
+        ...previousUser,
+        ...updatedProfile
+      };
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(updatedUser)
+      );
+
+      return updatedUser;
+    });
+  };
+
+  /*
+   * =========================================================
+   * LOGOUT
+   * =========================================================
+   */
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -109,6 +240,11 @@ function App() {
     navigate("/");
   };
 
+  /*
+   * =========================================================
+   * CREATE EXPENSE
+   * =========================================================
+   */
   const handleExpenseCreated = (newExpense) => {
     if (!newExpense) {
       return;
@@ -122,6 +258,11 @@ function App() {
     setError("");
   };
 
+  /*
+   * =========================================================
+   * EDIT EXPENSE
+   * =========================================================
+   */
   const handleEdit = (expense) => {
     if (!expense?._id) {
       return;
@@ -134,6 +275,11 @@ function App() {
     );
   };
 
+  /*
+   * =========================================================
+   * UPDATE EXPENSE
+   * =========================================================
+   */
   const handleUpdate = async (
     expenseId,
     updatedData
@@ -174,6 +320,11 @@ function App() {
     }
   };
 
+  /*
+   * =========================================================
+   * DELETE EXPENSE
+   * =========================================================
+   */
   const handleDelete = async (expenseId) => {
     if (!expenseId) {
       return;
@@ -210,7 +361,9 @@ function App() {
   };
 
   /*
-   * Logged-out routes
+   * =========================================================
+   * LOGGED-OUT ROUTES
+   * =========================================================
    */
   if (!user) {
     return (
@@ -245,52 +398,113 @@ function App() {
   }
 
   /*
-   * Logged-in routes
+   * =========================================================
+   * LOGGED-IN ROUTES
+   * =========================================================
    */
   return (
     <Routes>
-      {/* Email verification */}
+      {/* =====================================================
+          EMAIL VERIFICATION
+      ===================================================== */}
       <Route
         path="/verify-email"
         element={<VerifyEmail />}
       />
 
-      {/* Dashboard */}
+      {/* =====================================================
+          DASHBOARD
+      ===================================================== */}
       <Route
         path="/"
         element={
           <div className="app">
+
+            {/* =================================================
+                DASHBOARD HEADER
+            ================================================= */}
             <header className="header">
+
+              {/* -----------------------------------------------
+                  Header Title
+              ----------------------------------------------- */}
               <div>
-                <h1>Smart Expense Tracker</h1>
+                <h1>
+                  Smart Expense Tracker
+                </h1>
 
                 <p>
                   Welcome, {user.name || "User"}
                 </p>
               </div>
 
-              <div className="header-actions">
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate("/profile")
-                  }
-                  disabled={actionLoading}
-                >
-                  Profile
-                </button>
+              {/* -----------------------------------------------
+                  Header Actions
 
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  disabled={actionLoading}
-                >
-                  Logout
-                </button>
-              </div>
+                  IMPORTANT:
+                  Only ONE avatar is rendered here.
+
+                  Layout:
+                  [ Avatar ] [ Profile ] [ Logout ]
+              ----------------------------------------------- */}
+              <div className="dashboard-profile-actions">
+
+  {/* PROFILE AVATAR */}
+  <button
+    type="button"
+    className="dashboard-avatar-button"
+    onClick={() => navigate("/profile")}
+    disabled={actionLoading}
+    aria-label="Open profile"
+    title="Open profile"
+  >
+    <span className="dashboard-avatar">
+      {user?.profilePicture ? (
+        <img
+          src={user.profilePicture}
+          alt={`${user.name || "User"} profile`}
+        />
+      ) : (
+        <span aria-hidden="true">
+          {user?.name
+            ?.trim()
+            ?.charAt(0)
+            ?.toUpperCase() || "U"}
+        </span>
+      )}
+    </span>
+  </button>
+
+  {/* PROFILE + LOGOUT */}
+  <div className="dashboard-profile-buttons">
+
+    <button
+      type="button"
+      onClick={() => navigate("/profile")}
+      disabled={actionLoading}
+    >
+      Profile
+    </button>
+
+    <button
+      type="button"
+      onClick={handleLogout}
+      disabled={actionLoading}
+    >
+      Logout
+    </button>
+
+  </div>
+
+</div>
             </header>
 
+            {/* =================================================
+                MAIN DASHBOARD CONTENT
+            ================================================= */}
             <main className="container">
+
+              {/* GLOBAL ERROR */}
               {error && (
                 <div
                   className="error"
@@ -301,6 +515,7 @@ function App() {
                 </div>
               )}
 
+              {/* LOADING STATE */}
               {loading ? (
                 <div
                   className="card"
@@ -313,11 +528,19 @@ function App() {
                 </div>
               ) : (
                 <>
+                  {/* -------------------------------------------
+                      DASHBOARD ANALYTICS
+                  ------------------------------------------- */}
                   <Dashboard
                     expenses={expenses}
                   />
 
+                  {/* -------------------------------------------
+                      ADD EXPENSE + CURRENCY CONVERTER
+                  ------------------------------------------- */}
                   <div className="top-grid">
+
+                    {/* ADD EXPENSE */}
                     <div className="card">
                       <ExpenseForm
                         onExpenseCreated={
@@ -326,11 +549,16 @@ function App() {
                       />
                     </div>
 
+                    {/* CURRENCY CONVERTER */}
                     <div className="card">
                       <CurrencyConverter />
                     </div>
+
                   </div>
 
+                  {/* -------------------------------------------
+                      EXPENSE LIST
+                  ------------------------------------------- */}
                   <div className="card">
                     <ExpenseList
                       expenses={expenses}
@@ -340,14 +568,19 @@ function App() {
                   </div>
                 </>
               )}
+
             </main>
 
+            {/* FOOTER */}
             <Footer />
+
           </div>
         }
       />
 
-      {/* Profile */}
+      {/* =====================================================
+          PROFILE PAGE
+      ===================================================== */}
       <Route
         path="/profile"
         element={
@@ -355,11 +588,16 @@ function App() {
             user={user}
             onBack={() => navigate("/")}
             onLogout={handleLogout}
+            onProfileUpdated={
+              handleProfileUpdated
+            }
           />
         }
       />
 
-      {/* Edit expense */}
+      {/* =====================================================
+          EDIT EXPENSE
+      ===================================================== */}
       <Route
         path="/expenses/:id/edit"
         element={
@@ -371,7 +609,9 @@ function App() {
         }
       />
 
-      {/* Unknown route */}
+      {/* =====================================================
+          UNKNOWN ROUTE
+      ===================================================== */}
       <Route
         path="*"
         element={
